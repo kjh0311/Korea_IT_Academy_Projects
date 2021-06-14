@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="kr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다 기능 테트리스</title>
+
+<link rel="stylesheet" href="./Tetris.css" />
+
+</head>
+<body>
+    <div id="wrapper">
+        <div id="board"></div>
+        <div id="right-side">
+            <div id="next"></div>
+            <div id="info">info</div>
+            <div id="guide">guide</div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+<!--  
+파일 나누기
+
+성공적인듯
+
+그리고 만들다보니,
+결국에는 객체지향 방식의 도입이 필요한 듯
+
+
+1. json이나 class 이용해서 개선
+2. 다음 벽돌칸 만들기
+3. 벽돌 편집기 만들기
+4. 저장 불러오기 기능 추가
+5. 설명서 넣기
+
+6. 다 끝내고 할만한 프로젝트
+1) 코드분석기
+2) 계산기
+3) 그림판
+ -->
+<script src="./js/BoardInfo.js"></script>
+<script src="./js/KeyDownSensor.js"></script>
+<script src="./js/Viewer.js"></script>
+<script src="./js/BrickShapeManager.js"></script>
+<script src="./js/GameController.js"></script>
+<script src="./js/BrickBoardController.js"></script>
+<script src="./js/DebugPrinter.js"></script>
+<!--
+    Bricks.js는 controller나 viewer가 아닌,
+    model이므로 여기서 객체 생성 안 함
+-->
+<script src="./js/Bricks.js"></script>
+
+<script>
+var boardInfo = new BoardInfo();
+var viewer = new Viewer(boardInfo);
+var brickShapeManager = new BrickShapeManager();
+var keyDownSensor = new KeyDownSensor();
+var gameController = new GameController();
+var brickBoardController = new 
+    BrickBoardController(boardInfo);
+var debugPrinter = new 
+    DebugPrinter(boardInfo);
+
+
+window.addEventListener("load", ()=>{init();});
+// 화면 그리기, 벽돌 모양 보정, 키 입력 받기
+function init() {
+    viewer.showGridView();
+    brickShapeManager.correctBrickShape();
+    window.addEventListener("keydown",(e)=>{
+        // console.log(e.keyCode);
+        // 이 부분이 핵심
+        keyDownSensor.onKeyDown(e);
+    });
+}
+</script>

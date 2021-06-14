@@ -1,0 +1,45 @@
+
+#wrapper {
+    overflow: hidden;
+    width: 450px;
+    height: 650px;
+    margin: auto;
+    margin-top: 70px;
+}
+
+#board {
+    width: 300px;
+    height: 600px;
+    border: 2px solid black;
+    float: left;
+    position: relative;
+}
+#right-side {
+    width: 120px;
+    height: 600px;
+    border: 2px solid black;
+    border-left: 0px; /* 왼쪽에 붙히기 */
+    float: left;
+}
+
+#next {
+    width: 100px;
+    height: 100px;
+    margin: 10px;
+    border: 1px solid black;
+    position: relative;
+}
+
+#info {
+    width: 100px;
+    height: 100px;
+    margin: 10px;
+    border: 1px solid black;
+}
+
+#guide {
+    width: 100px;
+    height: 360px;
+    margin: 10px;
+    border: 1px solid black;
+}

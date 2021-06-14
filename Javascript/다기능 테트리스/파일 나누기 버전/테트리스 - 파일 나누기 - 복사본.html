@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="kr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>다 기능 테트리스</title>
+
+<link rel="stylesheet" href="./Tetris.css" />
+
+</head>
+<body>
+    <div id="wrapper">
+        <div id="board"></div>
+        <div id="right-side">
+            <div id="next"></div>
+            <div id="info">info</div>
+            <div id="guide">guide</div>
+        </div>
+    </div>
+</body>
+</html>
+
+
+<!--  
+파일 나누기
+
+성공적인듯
+
+그리고 만들다보니,
+결국에는 객체지향 방식의 도입이 필요한 듯
+
+
+1. json이나 class 이용해서 개선
+2. 다음 벽돌칸 만들기
+3. 벽돌 편집기 만들기
+4. 저장 불러오기 기능 추가
+5. 설명서 넣기
+
+6. 다 끝내고 할만한 프로젝트
+1) 코드분석기
+2) 계산기
+3) 그림판
+ -->
+<script src="./js/variables.js"></script>
+<script src="./js/onKeyDown.js"></script>
+<script src="./js/View.js"></script>
+<script src="./js/GameContol.js"></script>
+<script src="./js/createBlocks.js"></script>
+<script src="./js/moveAndSpin.js"></script>
+<script src="./js/debugPrint.js"></script>
+<script>
+
+window.addEventListener("load", ()=>{init();});
+window.addEventListener("keydown", (e)=>{onKeyDown(e);});
+
+
+// 화면그리기, 블록 모양 보정
+function init() {
+    // 초기화면 그리기
+    for (var i=0; i<rows; i++) {
+        for (var j=0; j<cols; j++) {
+            // i, j 위치에 무색 사각형을 그리고 boardGridView에 저장
+            boardGridViewDivs[i][j] = createRectangleDivByIndexToBoard(i, j, 0);
+        }
+    }
+    // 벽돌 모양 보정
+    for (var i=0; i<blockShapes.length; i++) {        
+        // 단순 최소 크기로 보정 (이 방식은 문제있음)
+        // blockShapes[i] = packBlockShape(blockShapes[i]);
+        // 정사각 가운데로 보정 (packBlockShape을 개선한 방식)
+        blockShapes[i] = squareCenterBlockShape(blockShapes[i]);
+    }
+}
+
+function onKeyDown(event) {
+    const ENTER = 13, ESC = 27, SPACE_BAR = 32,
+    LEFT = 37, UP = 38, RIGHT = 39, DOWN = 40;
+    
+    switch (event.keyCode) {
+        case ENTER:
+        case SPACE_BAR:
+            return onEnterSpaceKeyDown(event.keyCode);
+        case ESC:
+            return onEscKeyDown();
+        case LEFT:
+        case UP:
+        case RIGHT:
+        case DOWN:
+            return onArrowKeyDown(event.keyCode);
+    }
+}
+
+// 최소 모양으로
+function packBlockShape(blockShape) {
+    // console.log("\n\n실행 전");
+    // for (var i=0; i<blockShape.length; i++) {
+    //     console.log(blockShape);
+    // }
+    // min과 max를 구하고 반영
+    // Brute Force 알고리즘
+    var minJ, maxJ, minI, maxI;
+    for (var i=0; i<blockShape.length; i++) {
+        for (var j=0; j<blockShape[i].length; j++) {            
+            if (blockShape[i][j]=="*"){
+                if (minJ == undefined || j < minJ) {
+                    minJ = j;
+                    maxJ = j;
+                } else if (j > maxJ) {
+                    maxJ = j;
+                }
+                if (minI == undefined || i < minI) {
+                    minI = i;
+                    maxI = i;
+                } else if (i > maxI) {
+                    maxI = i;
+                }
+            }        
+        }
+    }
+    // console.log("최대 최소 인덱스 계산 결과");
+    // console.log("minI: "+minI+", maxI: "+maxI+", minJ: "+minJ+", maxJ: "+maxJ+"\n\n\n");
+    // 최소의 사각형 박스 안에 내용물 담기
+    var lineArray = [];
+    for (var i=minI; i<=maxI; i++) {
+        var line = "";
+        for (var j=minJ; j<=maxJ; j++) {
+            if (blockShape[i][j]=="*") {
+                line += "*";
+            } else {
+                line += "-";
+            }
+        }
+        lineArray.push(line);
+    }
+    // console.log("\n변환 결과");
+    // for (var i=0; i<lineArray.length; i++) {
+    //     console.log(lineArray[i]);
+    // }
+    return lineArray;
+}
+
+
+// 정사각 가운데 형태로 보정
+function squareCenterBlockShape(blockShape) {
+    console.log("\n\n실행 전");
+    for (var i=0; i<blockShape.length; i++) {
+        console.log(blockShape[i]);
+    }
+    // min과 max를 구하고 반영
+    // Brute Force 알고리즘
+    var minJ, maxJ, minI, maxI;
+    for (var i=0; i<blockShape.length; i++) {
+        for (var j=0; j<blockShape[i].length; j++) {            
+            if (blockShape[i][j]=="*"){
+                if (minJ == undefined || j < minJ) {
+                    minJ = j;
+                    maxJ = j;
+                } else if (j > maxJ) {
+                    maxJ = j;
+                }
+                if (minI == undefined || i < minI) {
+                    minI = i;
+                    maxI = i;
+                } else if (i > maxI) {
+                    maxI = i;
+                }
+            }        
+        }
+    }
+
+    // 가운데 보정
+    var minIJ = (minI<minJ)?minI:minJ;
+    var maxIJ = (maxI>maxJ)?maxI:maxJ;
+
+    var iOffset, jOffset;
+
+    var jLeftMargin = minJ-minIJ;
+    var jRightMargin = maxIJ-maxJ;
+    var jLeftRightMarginDifference = jLeftMargin - jRightMargin;
+
+    var iTopMargin = minI-minIJ;
+    var iBottomMargin = maxIJ-maxI;
+    var iTopBottomMarginDifference = iTopMargin - iBottomMargin;
+
+    /* // 차이가 1이거나 0이면 jOffset은 0이 되어야함 */
+    // 차이가 -1이거나 0이면 jOffset은 0으로
+    if (jLeftRightMarginDifference < 0 ) {
+        jOffset = jLeftRightMarginDifference+1;
+    } else {
+        jOffset = jLeftRightMarginDifference;
+    }
+
+    /* // 차이가 1이거나 0이면 iOffset은 0이 되어야함 */
+    // 차이가 -1이거나 0이면 iOffset은 0으로
+    if (iTopBottomMarginDifference < 0) {
+        iOffset = iTopBottomMarginDifference+1;
+    } else {
+        iOffset = iTopBottomMarginDifference;
+    }
+    // console.log("최대 최소 인덱스 계산 결과");    
+    // console.log(
+    //     "minI: "+minI+", maxI: "+maxI+", minJ: "+minJ+", maxJ: "+maxJ+
+    //     "\nminIJ: "+minIJ+", maxIJ: "+maxIJ+
+    //     "\njLeftMargin: "+jLeftMargin+", jRightMargin: "+jRightMargin+
+    //     "\niOffset: "+iOffset+", jOffset: "+jOffset+
+    //     "\n\n\n");
+    // 최소의 사각형 박스 안에 내용물 담기
+    var lineArray = [];
+    for (var i=minIJ; i<=maxIJ; i++) {
+        var line = "";
+        for (var j=minIJ; j<=maxIJ; j++) {
+
+            var centeredI = (i+iOffset)%(maxIJ+1);
+            var centeredJ = (j+jOffset)%(maxIJ+1);
+
+            // console.log("centeredI: "+centeredI+", centeredJ: "+centeredJ);
+
+            if (blockShape[centeredI][centeredJ]=="*") {
+                line += "*";
+            } else {
+                line += "-";
+            }
+        }
+        lineArray.push(line);
+    }
+
+    console.log("\n변환 결과");
+    for (var i=0; i<lineArray.length; i++) {
+        console.log(lineArray[i]);
+    }
+
+    return lineArray;
+}
+</script>
