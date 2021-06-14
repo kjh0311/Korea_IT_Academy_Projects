@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>코드 구조도 생성 편집기</title>
+<style>
+#wrapper {
+    margin: auto;
+    overflow-x: hidden;
+    /* 연결선을 absolute로 해야하므로 지정함 */
+    /* position: relative; */
+}
+
+input[type="file"] {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.title {
+    width: 500px;
+}
+
+.content {
+    width: 500px;
+    overflow: visible;
+}
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="js/lib.js"></script>
+<script src="js/CodeAnalyzer.js"></script>
+<script src="js/CodeBox.js"></script>
+<script>
+
+var codeAnalyzer = new CodeAnalyzer();
+
+
+var fileName = "";
+var fileExt = "";
+
+var wrapper;
+var fileSelector;
+var title, content;
+
+var levelWidth = 0;
+var levelHeight = 0;
+
+
+var outsider;
+var functions;
+
+var firstBox;
+// 여러 레벨에 대한 배열을 저장함
+var allLevelArray = [];
+
+
+window.addEventListener("load", ()=>{        
+
+    wrapper = document.getElementById("wrapper");
+    fileSelector = document.getElementById("fileSelector");
+    title = document.querySelector(".title");
+    content = document.querySelector(".content");
+
+
+    // 1. 파일을 선택했으면 선택한 파일의 내용으로 코드 구조도를 그려서
+    //    편집할 수 있게한다.
+    fileSelector.onchange = function (event) {
+        // 가독성을 위해 매개변수를 변수화함 (이름짓기)
+        var selectedFile = event.target.files[0];
+        processSelectedFile(selectedFile);
+    };
+
+    // 2. 종료 시 저장 여부를 묻는 기능을 추가하고자 했는데, 작동 안 함
+    window.onbeforeunload = function(e) {
+        e.preventDefault();
+        if (firstBox != undefined && firstBox.isChanged()) {
+            if (confirm("변경된 내용을 저장하시겠습니까?")) {
+                save();
+            }
+        }
+    }
+});
+
+/// 3. 선택한 파일 가공하기
+function processSelectedFile(selectedFile) {
+    // console.log(file);
+    fileName = selectedFile.name;
+    fileExt = getExtensionOfFilename(fileName);    
+
+    var reader = new FileReader();
+
+    // 파일을 읽은 이후 동작 정의
+    // (파일 읽기는 그 이후에 함)
+    reader.onload = function () {
+        var script;
+
+        switch (fileExt) {
+        case '.js':
+            script = reader.result;
+            break;
+        case '.html':
+        case '.ejs':
+        default:
+            // lib.js에 정의
+            script = extractScriptInHtml(reader.result);
+        }
+        // 4. 코드를 함수와 함수 바깥으로 분리함
+        var result = codeAnalyzer.splitCode(script);
+        functions = result.functions;
+        outsider = result.outsider;
+
+        // 5. 소스 코드를 함수 트리로 변환한다. (반환값은 leafBoxes)
+        var leafBoxes = codeToFunctionTree(outsider, functions, 4);
+    };
+
+    // 선택한 파일 읽기
+    reader.readAsText(selectedFile/* ,"인코딩 형식"*/);
+}
+
+
+/*
+1. 대상 코드(code)를 이용해 첫 줄과 첫 박스를 만든다.
+2. 첫 줄의 길이를 구해서 levelWidth 변수에 대입한다.
+3. 첫 줄을 allLevelArray에 넣는다.
+4. '정해진 레벨까지' 레벨을 파생해서 만드는 것을 개발한다.
+
+코드 바로잡기
+
+1) 어차피 모든 level의 박스를 allLevelArray에 넣으므로
+   레벨을 생성하자마자 너비를 구할 필요는 없음
+2) 레벨 만들기는 함수로 묶어서 읽기 쉽게 만들기
+3) 함수로 묶다보면 클래스로 만들고 싶어질 것임
+
+일단 함수버전을 만들고 압축해놓고,
+클래스 버전으로 또 만들기
+
+
+함수 버전 코드 모양 그대로 유지하려면 level과 levelWidth를 묶은 JSON으로 리턴할 필요가 있음
+(level은 level로)
+
+*/
+function codeToFunctionTree(code, functions, maxLevel) {
+
+    // 1. 대상코드를 이용해 첫 줄과 첫 박스를 만든다.
+    var levelDivAndBoxes = createFirstLevel(code);
+    allLevelArray.push(levelDivAndBoxes);
+
+    // 2. 기존의 레벨에서 호출하는 함수를 확인하여, 정해진 레벨까지 생성한다.
+    // 첫 줄 생성코드가 코드를 인수로 받으므로, 다음 레벨 만드는 코드의 첫 번째 인수는 함수 배열로 한다.
+    for (var level = 1; level <= maxLevel; level++) {
+        console.log(levelDivAndBoxes);
+        // 모든 박스에 대해 다음 레벨이 있는지 체크한다.
+        var nextLevelExists = findNextLevelForAllBoxes(functions, levelDivAndBoxes.boxArray);
+        if (nextLevelExists) {
+            levelDivAndBoxes = createNextLevel(functions, levelDivAndBoxes.boxArray);
+            allLevelArray.push(levelDivAndBoxes);
+        } else {
+            break;
+        }
+    }
+
+    levelWidth = firstBox.alignLeafBoxes();
+    levelHeight = 
+            allLevelArray[allLevelArray.length-1].div.
+            getBoundingClientRect().height;
+
+    // 정렬하기 전 너비, 높이 고정
+    for (var i=0; i<allLevelArray.length; i++) {
+        // 다음 레벨을 정렬하고, 연결선 그리기 이전에
+        // 가로 길이부터 고정시켜놔야함
+        var numberOfBox = allLevelArray[i].boxArray.length;
+        var levelDiv = allLevelArray[i].div;        
+
+        levelDiv.style.width = levelWidth + "px";
+        // 가운데 정렬 시 모든 요소에 absolute 속성을 부여하므로
+        // 높이도 현재 높이에서 변하지 않도록 고정해야함
+        levelDiv.style.height = levelHeight + "px";
+        levelDiv.style.marginTop = numberOfBox * 10 + "px";
+    }
+
+
+    levelWidth = firstBox.centerAmongChildBoxes();
+
+    firstBox.connectChildBoxes(wrapper);
+    // realignAllLevels();
+
+    // 편의상 리턴
+    return firstBox.getLeafBoxes();
+    // return leafBoxes;
+}
+
+
+function createFirstLevel(code) {
+    // 지역상수는 일반변수와 명명규칙이 동일하다. (자바 수업 시간에 배움)
+    div = document.createElement("div");
+    div.style.zIndex = 1;
+    div.style.position = "relative";
+    wrapper.appendChild(div);
+
+    // console.log(uncommented);
+    firstBox = new CodeBox(div, code, realignAllLevels);
+    // 한 레벨의 박스를 저장함
+    var boxArray = [firstBox];
+
+    return {
+        div, boxArray
+    }
+}
+
+
+function findNextLevelForAllBoxes(functions, levelBoxArray) {
+    var nextLevelExist = false;
+
+    // console.log(levelBoxArray);
+
+    // 아래 for문에서는 levelArray를 일체 수정하지 않는다.
+    for (var i=0; i<levelBoxArray.length; i++) {
+        var callerBox = levelBoxArray[i];
+        var callerName = callerBox.uncommented.name;
+        var callerContent = callerBox.uncommented.content;
+
+        for (var j=0; j<functions.length; j++) {
+            var functionName = functions[j].uncommented.name;
+            // 재귀'적' 호출
+            if (callerName == functionName) {
+                continue;
+            }
+            else {                    
+                var result = codeAnalyzer.findFunctionCall(callerContent, functionName);
+                if (result > 0) {                            
+                    // console.log( (callerName==""?"함수 밖":callerName) + "에서 함수 발견" );
+                    // nextLevelArray.push(functions[j]);
+                    // childIndexInLevel.push(j);                        
+                    callerBox.addChildFunction(functions[j]);
+                    nextLevelExist = true;
+                }
+            }
+        }
+    }
+
+    return nextLevelExist;
+}
+
+
+function createNextLevel(functions, levelBoxArray) {
+    // 검색 후 levelArray에 대체할 배열
+    var div = document.createElement("div");
+    var boxArray = [];
+    var divWidth = 0;
+    
+    div.style.zIndex = 1;
+    div.style.position = "relative";
+    wrapper.appendChild(div);
+
+    for (var i=0; i<levelBoxArray.length; i++) {
+        var callerBox = levelBoxArray[i];
+        var childFunctionArray = callerBox.getChildFunctionArray();
+
+        for (var j=0; j<childFunctionArray.length; j++) {
+            var elem = childFunctionArray[j];
+            // console.log(functions[index]);
+            // 기존 레벨의 박스 중 동일한 것이 이미 있다면
+            // 가져와서 레벨만 교체하고, 없으면 새로 생성함
+            var newBox = new CodeBox(
+                div, elem, realignAllLevels
+            );
+            callerBox.addChildBox(newBox);
+            boxArray.push(newBox);
+        }
+    }
+
+    return {
+        div, boxArray
+    };
+}
+
+
+function realignAllLevels() {
+    // 우측 정렬
+    // for (var i=0; i<allLevelArray.length; i++) {
+    //     var levelBoxArray = allLevelArray[i].levelBoxArray;
+    //     for (var j=1; j<levelBoxArray.length; j++) {            
+    //         var box = levelBoxArray[j];
+    //         var childLength = box.getChildBoxArray().length;
+    //         if (childLength == 0) {
+    //             var leftBox = levelBoxArray[j-1];
+    //             var target = leftBox.getRightAndMargin();
+    //             if (target != box.getLeft()) {
+    //                 box.setLeft(target);
+    //             }
+    //         }
+    //     }
+    // }
+    
+    // console.log("realignAllLevels 진입");
+    // levelWidth += widthDifference;
+    levelWidth = firstBox.alignLeafBoxes();
+
+    for (var i=0; i<allLevelArray.length; i++) {
+        // 다음 레벨을 정렬하고, 연결선 그리기 이전에
+        // 가로 길이부터 고정시켜놔야함
+        var levelDiv = allLevelArray[i].div;
+        levelDiv.style.width = levelWidth + "px";
+    }
+
+    levelWidth = firstBox.centerAmongChildBoxes();
+
+    // 중앙정렬
+    // var leafBoxes = firstBox.getLeafBoxes();
+    // for (var i=allLevelArray.length-2; i>=0; i--) {
+    //     var levelBoxArray = allLevelArray[i].levelBoxArray;
+    //     for (var j=0; j<levelBoxArray.length; j++) {
+    //         // 모든 상위 박스는 하위 박스의 가운데에 오게 한다.
+    //         levelBoxArray[j].centerAmongChildBoxes();
+    //         // 진전 박스와 겹치는지 체크하고, 겹치면 이 노드의 가장 왼쪽 잎사귀부터 그 이후 모든 잎사귀 노드에 대해서
+    //         // 겹치는 만큼 이동시키고 다시 가운데로 정렬한다. (백트래킹)
+    //         if (j>0 && levelBoxArray[j-1].getRightAndMargin() > levelBoxArray[j].getLeft()) {
+    //             var leftDiff = levelBoxArray[j-1].getRightAndMargin() - levelBoxArray[j].getLeft();
+    //             var leftMostLeaf = levelBoxArray[j].getLeafBoxes()[0];
+    //             var startLeafIndex = leafBoxes.indexOf(leftMostLeaf);
+
+    //             for (var k=startLeafIndex; k<leafBoxes.length; k++) {
+    //                 leafBoxes[k].addLeft(leftDiff);
+    //             }
+    //             levelBoxArray[j].centerAmongChildBoxes();
+    //         }
+    //     }
+    // }
+
+
+    // 매번 변경사항이 있으면 연결선을 전체적으로 다시 그린다.
+    for (var i=allLevelArray.length-2; i>=0; i--) {
+        var levelBoxArray = allLevelArray[i].boxArray;
+        for (var j=0; j<levelBoxArray.length; j++) {
+            levelBoxArray[j].eraseAllLines();
+            levelBoxArray[j].connectChildBoxes(wrapper);
+        }
+    }
+}
+
+
+function save() {
+    if (firstBox != undefined) {
+
+        firstBox.saveTextAll();
+        var content = recoverCode();
+        console.log(content);
+        
+        const file = new Blob([content], {type: "text/javascript;charset=utf-8;"});
+        const object = URL.createObjectURL(file);
+        // var openNewWindow = window.open("about:blank");
+        // openNewWindow.location.href = object;
+        // window.open(object);
+        const aTag = document.createElement("a");
+        aTag.target="_blank";
+        aTag.href = URL.createObjectURL(file);
+        aTag.download = fileName;
+        aTag.click();
+    }
+}
+
+
+function recoverCode() {
+    var script = outsider.commented.content;
+    for (var i=0; i<functions.length; i++) {
+        script = codeAnalyzer.replaceFunctionMark(script, functions[i].commented);
+    }
+    return script;
+}
+
+
+</script>
+</head>
+<body>
+    <div id="wrapper">
+        <!-- 아무리 찾아봐도 accept에 지정한 확장자 설명 부여하는 기능은 안 나옴 -->
+        <!-- <input type="file" accept="{ '소스파일': '.html,.js,.ejs'}" id="fileInput" > -->
+        <input type="file" id="fileSelector" style="width:500px" description= "소스파일" accept=".html,.js,.ejs">
+        <button id="buttonId" onclick="save()">저장</button>
+        <!-- <p class="title"></p>
+        <textarea class="content">
+        </textarea> -->
+    </div>
+</body>
+</html>

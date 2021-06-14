@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>구조도 기반 코드 편집기</title>
+<style>
+#wrapper {
+    margin: auto;
+}
+
+input[type="file"] {
+    display: block;
+    margin-bottom: 5px;
+}
+
+#main {
+    width: 450px;
+    height: 500px;
+}
+</style>
+<script>
+
+var fileInput, textArea;
+
+window.addEventListener("load", ()=>{
+    fileInput = document.getElementById("fileInput");
+    textArea = document.querySelector("textarea");
+
+    fileInput.onchange = function (event) {
+        processFile(event.target.files[0]);
+    };
+});
+
+function processFile(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+        console.log("reader.result");
+        console.log(reader.result);
+        textArea.value = reader.result;
+        console.log("textArea.value");
+        console.log(textArea.value);
+    };
+    reader.readAsText(file/* , "euc-kr" */);
+}
+
+</script>
+</head>
+<body>
+    <div id="wrapper">
+
+        <!-- 아무리 찾아봐도 accept에 지정한 확장자 설명 부여하는 기능은 안 나옴 -->        
+        <input type="file" accept=".html,.js,.ejs" id="fileInput" >
+        <textarea id="main">
+        </textarea>
+    </div>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<body onload="myFunction()">
+
+<p>Click the button to perfom a global search for the letters "ain" in a string, and display the matches.</p>
+
+<button onclick="myFunction()">Try it</button>
+
+<p id="demo"></p>
+
+<script>
+function myFunction() {  
+  var str = 
+  	"// 1"+
+    " 2"+
+    "// 3";
+  var regexString = "1";
+  var regExp = new RegExp(regexString, "g");
+  var res = str.match(regExp);
+  //var res = str.match(/a/g);
+  document.getElementById("demo").innerHTML = res;
+}
+</script>
+
+</body>
+</html>

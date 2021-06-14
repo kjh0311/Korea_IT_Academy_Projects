@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+    
+<body onload="myFunction()">
+<button onclick="myFunction()">Try it</button>
+
+<p id="name"></p>
+<p id="content"></p>
+
+<!-- 재귀패턴 쉽게 적용하려 받음 -->
+<script src="https://unpkg.com/xregexp/xregexp-all.js"></script>
+<script>
+
+
+// count가 -1이 되면 해당 인덱스를 리턴
+function findEndFunctionIndex(afterBrace) {
+    var count = 0;
+    var i=0;
+    for (var i=0; i<afterBrace.length; i++) {
+        if (afterBrace.charAt(i) == "{") {
+            count++;
+        } else if (afterBrace.charAt(i) == "}") {
+            count--;
+            if (count<0) {
+                return i;
+            }
+        }
+    }
+    // 함수가 미완결된 비정상적인 경우
+    return i;
+}
+
+function myFunction() {
+
+    var includeLineFeed = "s";
+
+    var mustStart = "^";
+
+    var mustNotCharactor = "\\W";
+    var canSpace = "\\s*";
+    var mustSpace = "\\s+";
+    var canUnderBar = "_*";
+    var alphabetOneMore = "[a-zA-Z]+";
+
+    // 함수명을 추출할 수 있도록 괄호로 감쌈
+    var functionName = "(" + canUnderBar + alphabetOneMore + ")";
+    var variableName = canUnderBar + alphabetOneMore;
+    
+    // 콤마 양옆에 띄어쓰기 가능, 오른쪽에는 변수명
+    var commaAndVariable = canSpace + "," + canSpace + variableName;
+    var canCommaAndVariableRepeatable = "(" + commaAndVariable + ")*";
+
+    // 변수가 온다면 변수 오른쪽에 ,와 추가적인 변수가 올 수 있음
+    var canVariables = 
+        "(" + variableName + canCommaAndVariableRepeatable + ")?";
+    // 변수가 올 수 있고, 변수 양옆에 띄어쓰기 가능
+    var canParameters = canSpace + canVariables + canSpace;
+
+    var regexString = 
+        // function 앞에는 공백문자만 허용 (아무것도 없으면 강제로 한칸띔)
+        mustNotCharactor +
+        "function" + mustSpace + functionName + canSpace +
+        // 파라미터 받기 (괄호 안에 파라미터 입력 가능)
+        "\\(" + canParameters + "\\)" + canSpace + 
+        "{((.*)})";
+        
+    console.log(regexString);
+
+    var regExp = new RegExp(regexString, includeLineFeed);
+    var str = " " +
+        "function a ( _a, _b, _c, _d ) { 함수 내용1 {ㅀ} sdsdf }\n" +
+        "function b ( _a, _b, _c, _d ) { 함수 내용2 } dsfsdfdsf";
+
+        // regexString의 재귀식으로 위와 같은 문자열을 분석하면
+        // str.match(regExp);의 마지막 그룹은 중괄호 시작부터
+        // 함수 내용2 다음에 오는 마지막 중괄호까지 가져온다.
+
+        // 위와같은 상황을 재귀패턴이라고 하는데,
+        // 재귀패턴은 반복문이나 재귀함수로 처리하는 방법밖에 없는 것 같다.    
+
+    // 이거 해보니까 의도치않게 학원 수업을 더 자세하게 복습하게 됨
+
+    var result;
+    // result = str.match(regExp);
+    // for (var i=0; i<result.length; i++) {
+    //     console.log("result["+i+"]:", result[i]);
+    // }
+
+    var functions = [];    
+    while (result = str.match(regExp)) {
+        var functionName = result[1];
+        var afterBrace = result[4];        
+        var endFuctionIndex = findEndFunctionIndex(afterBrace);
+        var functionContent = afterBrace.substring(0, endFuctionIndex);
+        str = afterBrace.substring(endFuctionIndex);
+        functions.push({
+            name: functionName,
+            content: functionContent
+        });
+    }
+    console.log(functions);
+
+    // console.log(result);    
+
+
+    // var firstFunctionName = result[1];
+    // var afterBrace = result[4];
+
+    // var result2 = afterBrace.match(regExp);
+
+    // // console.log(result2);    
+    // for (var i=0; i<result2.length; i++) {
+    //     console.log("result2["+i+"]:", result2[i]);
+    // }
+
+    // document.getElementById("name").innerHTML = firstFunctionName;
+    // document.getElementById("content").innerHTML = afterBrace;
+
+    // document.getElementById("name").innerHTML = firstFunctionName;
+    // document.getElementById("content").innerHTML = afterBrace;
+
+
+    // 함수 호출 찾는 것은 다음과 같이 구현
+    // var regexString = 
+    //     mustStart + canSpace +
+    //     // 함수명 정의
+    //     functionName + canSpace +
+    //     // 파라미터 받기 (괄호 안에 파라미터 입력 가능)
+    //     "\\(" + canParameters + "\\)" + canSpace + ";";
+
+    // console.log(regexString);
+
+    // 함수 호출
+    // var str = "a(_a, _b, _c, _d, _e);";
+
+
+    // var regExp = new RegExp(
+    //     "^function\s+"+ functionName +"\(\s*(("+variableName
+    //     +")(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*{.*}$",
+    //     "s" // .이 개행문자도 포함
+    //     );
+    // function으로 시작하여
+    // 공백 가능하고 다음에 여는 소괄호
+    // 그 뒤에 공백 가능하고, 변수명 가능
+
+
+    // 그 뒤에 공백가능하고,
+    // 뒤에 콤마가 있으면 그 뒤에 반드시 변수명이 와야함
+    // (콤마와 변수명 사이에는 공백가능)
+    // 다음은 함수 프로토타입 찾아내는 regex
+    // var res = str.match(/^function\s*\(\s*((_[a-zA-Z]+|[a-zA-Z]+)(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*;$/gi);
+    // 함수 탐지 regex
+    // var res = str.match(/^function\s*\(\s*((_[a-zA-Z]+|[a-zA-Z]+)(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*{(.|\n)*}$/s);
+    // console.log(res);
+    // document.getElementById("demo").innerHTML = res;
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+    
+<body onload="myFunction()">
+<button onclick="myFunction()">Try it</button>
+
+<p id="name"></p>
+<p id="content"></p>
+
+<!-- 재귀패턴 쉽게 적용하려 받음 -->
+<script src="https://unpkg.com/xregexp/xregexp-all.js"></script>
+<script>
+
+function myFunction() {
+    // regex는 단계적으로 풀어가야함
+    // var str = "function ( _a, _b ) {sdfsd\nfdsfhg}";
+
+    // // C언어에 구조체가 있듯이 자바스크립트에는 JSON이 있음
+    // // 내 특유의 표현으로 가독성 높혀보겠음
+    // var regexMark = {
+    //     start: "^",
+    //     end: "$",
+    //     canSpace: "\s*",
+    //     includeLineFeed: "s"
+    // };
+
+    
+    // // _로 시작 가능, 알파벳 최소 1글자 이상
+    // var canUnderBar = "_*";
+    // var alphabetOneMore = "[a-zA-Z]+";
+
+    // var signiturePattern = "_*[a-zA-Z]+";
+    // // var signiturePattern = "(_[a-zA-Z]+|[a-zA-Z]+)";
+    // var functionName = canUnderBar + alphabetOneMore;
+    // var variableName = canUnderBar + alphabetOneMore;
+
+    var includeLineFeed = "s";
+
+    var mustStart = "^";
+    var mustEnd = "$";
+
+    var canSpace = "\\s*";
+    var mustSpace = "\\s+";
+    var canUnderBar = "_*";
+    var alphabetOneMore = "[a-zA-Z]+";
+
+    // 함수명을 추출할 수 있도록 괄호로 감쌈
+    var functionName = "(" + canUnderBar + alphabetOneMore + ")";
+    var variableName = canUnderBar + alphabetOneMore;
+    
+    // 콤마 양옆에 띄어쓰기 가능, 오른쪽에는 변수명
+    var commaAndVariable = canSpace + "," + canSpace + variableName;
+    var canCommaAndVariableRepeatable = "(" + commaAndVariable + ")*";
+
+    // 변수가 온다면 변수 오른쪽에 ,와 추가적인 변수가 올 수 있음
+    var canVariables = 
+        "(" + variableName + canCommaAndVariableRepeatable + ")?";
+    // 변수가 올 수 있고, 변수 양옆에 띄어쓰기 가능
+    var canParameters = canSpace + canVariables + canSpace;
+
+    // 중괄호 안에 전체 내용    
+    // var content = "(.*)";
+
+    // 중괄호는 대칭이 맞아야 함
+    // {가 나와야지만 }가 가능
+    // var excludeOddClose = "([^}]*)";
+    // // // var includePairBrace = "([^}]*{.*})[^}]*";
+    // var includePairBrace = "([^}]*({[^}]*})*[^}]*)";
+
+    // var content = 
+    //     "(" + includePairBrace + 
+    //     "|" + excludeOddClose + 
+    //     ")";
+
+    // var content = excludeOddClose + includePairBrace + excludeOddClose;
+
+    var regexString = 
+        // 함수명 정의
+        "function" + mustSpace + functionName + canSpace +
+        // 파라미터 받기 (괄호 안에 파라미터 입력 가능)
+        "\\(" + canParameters + "\\)" + canSpace +
+        // "{((?>[^{}]+|(?R))*)}";
+        // "{" + content + "}";
+        // "{" + excludeOddClose + "}";
+
+    console.log(regexString);
+
+    var regExp = new RegExp(regexString, includeLineFeed);
+    var str = "function a ( _a, _b, _c, _d ) { 함수 내용1 {ㅀ} sdsdf } function b ( _a, _b, _c, _d ) { 함수 내용2 }";
+        
+    var result = str.match(regExp);
+
+    console.log(result);    
+    for (var i=0; i<result.length; i++) {
+        console.log("result["+i+"]:", result[i]);
+    }
+
+    var functionName = result[1];
+    var functionContent = result[4];    
+    document.getElementById("name").innerHTML = functionName;
+    document.getElementById("content").innerHTML = functionContent;
+
+
+    // 함수 호출 찾는 것은 다음과 같이 구현
+    // var regexString = 
+    //     mustStart + canSpace +
+    //     // 함수명 정의
+    //     functionName + canSpace +
+    //     // 파라미터 받기 (괄호 안에 파라미터 입력 가능)
+    //     "\\(" + canParameters + "\\)" + canSpace + ";";
+
+    // console.log(regexString);
+
+    // 함수 호출
+    // var str = "a(_a, _b, _c, _d, _e);";
+
+
+    // var regExp = new RegExp(
+    //     "^function\s+"+ functionName +"\(\s*(("+variableName
+    //     +")(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*{.*}$",
+    //     "s" // .이 개행문자도 포함
+    //     );
+    // function으로 시작하여
+    // 공백 가능하고 다음에 여는 소괄호
+    // 그 뒤에 공백 가능하고, 변수명 가능
+
+
+    // 그 뒤에 공백가능하고,
+    // 뒤에 콤마가 있으면 그 뒤에 반드시 변수명이 와야함
+    // (콤마와 변수명 사이에는 공백가능)
+    // 다음은 함수 프로토타입 찾아내는 regex
+    // var res = str.match(/^function\s*\(\s*((_[a-zA-Z]+|[a-zA-Z]+)(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*;$/gi);
+    // 함수 탐지 regex
+    // var res = str.match(/^function\s*\(\s*((_[a-zA-Z]+|[a-zA-Z]+)(\s*,\s*(_[a-zA-Z]+|[a-zA-Z]+))*\s*)?\)\s*{(.|\n)*}$/s);
+    // console.log(res);
+    // document.getElementById("demo").innerHTML = res;
+}
+</script>
+
+</body>
+</html>
