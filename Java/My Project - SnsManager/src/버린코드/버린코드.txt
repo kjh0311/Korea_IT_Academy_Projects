@@ -1,0 +1,25 @@
+
+//			TimelinePanel newTimelinePanel = new TimelinePanel(information, titledVO);
+//			timelinePanels.add(newTimelinePanel);
+
+
+		// 타임라인 패널 벡터에 원소를 채운 이후 timeline_container에 추가한다.		
+//		for (AbstractContentsPanel panel: timelinePanels) {
+//			timeline_container.add(panel);
+//		}
+
+
+
+// 변환 테스트 코드
+        	// month 값은 + 1을 붙혀야함 
+//        	date.year = calendar.get(Calendar.YEAR);
+//        	date.month = calendar.get(Calendar.MONTH) + 1;
+//        	date.week = calendar.get(Calendar.WEEK_OF_MONTH);
+//        	date.day = calendar.get(Calendar.DATE);
+//        	
+//        	am_pm = calendar.get(Calendar.AM_PM);
+//        	hour = calendar.get(Calendar.HOUR);
+//        	minute = calendar.get(Calendar.MINUTE);
+//        	
+//        	System.out.println("변환하기 전 - am_pm: " + am_pm + ", hour: " + hour + ", minute: " + minute);
+//        	System.out.println(date);
